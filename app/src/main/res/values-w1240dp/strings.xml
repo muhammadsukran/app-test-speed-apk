@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fps">FPS: -</string>
+    <string name="battery_level">Battery Level: -</string>
+    <string name="ping">Ping: -</string>
+    <string name="start_test">Start Test</string>
+</resources>
