@@ -14,6 +14,8 @@ import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.speedtest.databinding.ActivityMainBinding
+import java.io.BufferedReader
+import java.io.InputStreamReader
 
 class MainActivity : AppCompatActivity() {
 
@@ -44,7 +46,6 @@ class MainActivity : AppCompatActivity() {
         animateBackground()
     }
 
-
     private fun setupUI() {
         binding.btnStartTest.setOnClickListener {
             simulateLag()
@@ -73,8 +74,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun measureFPS() {
-        // Menampilkan placeholder FPS
-        binding.tvFPS.text = "FPS: $fps"
+        var frameCount = 0
+        var startTime = System.nanoTime()
+        val refreshInterval = 1000 // dalam milidetik
+
+        val fpsHandler = Handler(Looper.getMainLooper())
+        val fpsRunnable = object : Runnable {
+            override fun run() {
+                val currentTime = System.nanoTime()
+                frameCount++
+                if ((currentTime - startTime) >= refreshInterval * 1_000_000) {
+                    fps = (frameCount * 1_000_000_000L / (currentTime - startTime)).toInt()
+                    frameCount = 0
+                    startTime = System.nanoTime()
+                    binding.tvFPS.text = "FPS: $fps"
+                }
+                fpsHandler.postDelayed(this, refreshInterval.toLong())
+            }
+        }
+        fpsHandler.post(fpsRunnable)
     }
 
     private fun measureBatteryLevel() {
@@ -93,9 +111,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun measurePing() {
-        // Simulasi pengukuran ping
-        val pingValue = "50 ms"
-        binding.tvPing.text = "Ping: $pingValue"
+        Thread {
+            try {
+                val process = Runtime.getRuntime().exec("/system/bin/ping -c 1 www.google.com")
+                val reader = BufferedReader(InputStreamReader(process.inputStream))
+                var line: String?
+                var pingResult = ""
+                while (reader.readLine().also { line = it } != null) {
+                    if (line!!.contains("time=")) {
+                        val start = line!!.indexOf("time=") + 5
+                        val end = line!!.indexOf(" ms", start)
+                        pingResult = line!!.substring(start, end) + " ms"
+                        break
+                    }
+                }
+                reader.close()
+                runOnUiThread {
+                    binding.tvPing.text = "Ping: $pingResult"
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                runOnUiThread {
+                    binding.tvPing.text = "Ping: Error"
+                }
+            }
+        }.start()
     }
 
     private fun animateBackground() {
