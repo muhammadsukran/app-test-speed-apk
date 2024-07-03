@@ -4,7 +4,6 @@ import android.animation.ObjectAnimator
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -25,6 +24,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var runnable: Runnable
 
     private var fps: Int = 0
+    private var frameCount = 0
+    private var startTime = 0L
+    private val refreshInterval = 1000L // dalam milidetik
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,31 +70,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun measurePerformance() {
-        measureFPS()
+        startTime = System.nanoTime()
+        handler = Handler(Looper.getMainLooper())
+        handler.post(updateFPSRunnable)
         measureBatteryLevel()
         measurePing()
     }
 
-    private fun measureFPS() {
-        var frameCount = 0
-        var startTime = System.nanoTime()
-        val refreshInterval = 1000 // dalam milidetik
-
-        val fpsHandler = Handler(Looper.getMainLooper())
-        val fpsRunnable = object : Runnable {
-            override fun run() {
-                val currentTime = System.nanoTime()
-                frameCount++
-                if ((currentTime - startTime) >= refreshInterval * 1_000_000) {
-                    fps = (frameCount * 1_000_000_000L / (currentTime - startTime)).toInt()
-                    frameCount = 0
-                    startTime = System.nanoTime()
-                    binding.tvFPS.text = "FPS: $fps"
-                }
-                fpsHandler.postDelayed(this, refreshInterval.toLong())
+    private val updateFPSRunnable = object : Runnable {
+        override fun run() {
+            frameCount++
+            val currentTime = System.nanoTime()
+            if ((currentTime - startTime) >= refreshInterval * 1_000_000) {
+                fps = (frameCount * 1_000_000_000L / (currentTime - startTime)).toInt()
+                frameCount = 0
+                startTime = currentTime
+                binding.tvFPS.text = "FPS: $fps"
             }
+            handler.postDelayed(this, 16) // Update setiap 16ms (~60fps)
         }
-        fpsHandler.post(fpsRunnable)
     }
 
     private fun measureBatteryLevel() {
